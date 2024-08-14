@@ -63,12 +63,7 @@ const obtenerReservasDesdeAPI = async () => {
       },
     });
     
-    const reservas = response.data.reservas.map(reserva => {
-      return {
-        ...reserva,
-        fecha: moment(reserva.fecha).tz('America/Santiago').format(),
-      };
-    });
+     const reservas = response.data.reservas;
     
     console.log('Reservas obtenidas:', reservas);
     return reservas;
