@@ -63,12 +63,8 @@ const obtenerReservasDesdeAPI = async () => {
       },
     });
     
-    const reservas = response.data.reservas.map(reserva => {
-      return {
-        ...reserva,
-        fecha: moment(reserva.fecha).tz('America/Santiago').format(),
-      };
-    });
+     // Remove the date conversion
+     const reservas = response.data.reservas;
     
     console.log('Reservas obtenidas:', reservas);
     return reservas;
@@ -143,36 +139,36 @@ app.get('/usuarios', async (req, res) => {
 
 
 app.post('/reservas', async (req, res) => {
-    const token = req.headers.authorization;
-    if (!token) {
-      return res.status(401).json({ message: 'No se proporcionó token' });
+  const token = req.headers.authorization;
+  if (!token) {
+    return res.status(401).json({ message: 'No se proporcionó token' });
+  }
+
+  try {
+    await verificarToken(token);
+    const nuevaReserva = {
+      ...req.body,
+      fecha: moment(req.body.fecha).tz('America/Santiago').format('YYYY-MM-DD HH:mm:00'),
+    };
+
+    // Enviar la reserva al servidor principal
+    const response = await axios.post('https://riberatennisclub.cl:3000/reservas', nuevaReserva, {
+      headers: { 'Authorization': token }
+    });
+
+    // Si la petición fue exitosa, devolver la respuesta al cliente
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error al crear reserva:', error);
+    if (error.response) {
+      // Si el servidor principal respondió con un error, enviamos ese error al cliente
+      res.status(error.response.status).json(error.response.data);
+    } else {
+      // Si hubo un error de red u otro tipo de error
+      res.status(500).json({ message: 'Error al crear reserva' });
     }
-  
-    try {
-      await verificarToken(token);
-      const nuevaReserva = {
-        ...req.body,
-        fecha: moment(req.body.fecha).tz('America/Santiago').format('YYYY-MM-DD HH:mm:00'),
-      };
-  
-      // Enviar la reserva al servidor principal
-      const response = await axios.post('https://riberatennisclub.cl:3000/reservas', nuevaReserva, {
-        headers: { 'Authorization': token }
-      });
-  
-      // Si la petición fue exitosa, devolver la respuesta al cliente
-      res.json(response.data);
-    } catch (error) {
-      console.error('Error al crear reserva:', error);
-      if (error.response) {
-        // Si el servidor principal respondió con un error, enviamos ese error al cliente
-        res.status(error.response.status).json(error.response.data);
-      } else {
-        // Si hubo un error de red u otro tipo de error
-        res.status(500).json({ message: 'Error al crear reserva' });
-      }
-    }
-  });
+  }
+});
 
 const PORT = 3000;
 app.listen(PORT, () => {
