@@ -150,7 +150,7 @@ app.post('/reservas', async (req, res) => {
     await verificarToken(token);
     const nuevaReserva = {
       ...req.body,
-      fecha: moment(req.body.fecha).tz('America/Santiago').format('YYYY-MM-DD HH:mm:00'),
+      fecha: moment(req.body.fecha).utc().format('YYYY-MM-DD HH:mm:00'),
     };
 
     // Enviar la reserva al servidor principal
