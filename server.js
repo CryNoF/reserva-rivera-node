@@ -55,24 +55,26 @@ const verificarToken = async (token) => {
 };
 
 const obtenerReservasDesdeAPI = async () => {
-  try {
-    const response = await axios.get('https://riberatennisclub.cl:3000/reservas', {
-      headers: {
-        'Accept': '*/*',
-        'Authorization': token,
-      },
-    });
-    
-     // Remove the date conversion
-     const reservas = response.data.reservas;
-    
-    console.log('Reservas obtenidas:', reservas);
-    return reservas;
-  } catch (error) {
-    console.error('Error al obtener reservas:', error);
-    throw error;
-  }
-};
+    try {
+      const fechaActual = moment().utc().format('YYYY-MM-DD');
+      const fechaUnaSemana = moment().utc().add(7, 'days').format('YYYY-MM-DD');
+      
+      const response = await axios.get(`https://riberatennisclub.cl:3000/reservas?fecha_inicio=${fechaActual}&fecha_fin=${fechaUnaSemana}`, {
+        headers: {
+          'Accept': '*/*',
+          'Authorization': token,
+        },
+      });
+      
+      const reservas = response.data.reservas;
+      
+      console.log('Reservas obtenidas:', reservas);
+      return reservas;
+    } catch (error) {
+      console.error('Error al obtener reservas:', error);
+      throw error;
+    }
+  };
 
 const obtenerUsuariosDesdeAPI = async () => {
   try {
@@ -165,10 +167,39 @@ app.post('/reservas', async (req, res) => {
       res.status(error.response.status).json(error.response.data);
     } else {
       // Si hubo un error de red u otro tipo de error
-      res.status(500).json({ message: 'Error al crear reserva' });
+      res.status(500).json({ message: 'La cancha ya está ocupada a esta hora.' });
     }
   }
 });
+
+app.delete('/reservas/:id', async (req, res) => {
+    const token = req.headers.authorization;
+    if (!token) {
+      return res.status(401).json({ message: 'No se proporcionó token' });
+    }
+  
+    try {
+      await verificarToken(token);
+      const idReserva = req.params.id;
+  
+      // Enviar la solicitud de eliminación al servidor principal
+      const response = await axios.delete(`https://riberatennisclub.cl:3000/reservas/${idReserva}`, {
+        headers: { 'Authorization': token }
+      });
+  
+      // Si la petición fue exitosa, devolver la respuesta al cliente
+      res.json(response.data);
+    } catch (error) {
+      console.error('Error al eliminar reserva:', error);
+      if (error.response) {
+        // Si el servidor principal respondió con un error, enviamos ese error al cliente
+        res.status(error.response.status).json(error.response.data);
+      } else {
+        // Si hubo un error de red u otro tipo de error
+        res.status(500).json({ message: 'Error al eliminar reserva' });
+      }
+    }
+  });
 
 const PORT = 3000;
 app.listen(PORT, () => {
